@@ -1,69 +1,97 @@
 # Cordova SMS Plugin
 
-Cross-platform plugin for Cordova / PhoneGap to to easily send SMS. Available for **Android**, **iOS**, **Windows Phone 8** and **Windows 10 Universal (BETA)**.
+Cross-platform plugin for Cordova / PhoneGap to to easily send SMS. Available for **Android**, **iOS**, **Windows Phone 8** and **Windows 10 Universal**.
 
 ## Installing the plugin
 
 Using the Cordova CLI and NPM, run:
 
-    cordova plugin add cordova-sms-plugin
+```sh
+$ cordova plugin add cordova-sms-plugin
+```
 
 It is also possible to install via repo url directly (unstable), run :
 
-    cordova plugin add https://github.com/cordova-sms/cordova-sms-plugin.git
+```sh
+cordova plugin add https://github.com/cordova-sms/cordova-sms-plugin.git
+```
 
 ## Using the plugin
 HTML
 
-    <input id="numberTxt" placeholder="Enter mobile number" value="" type="tel" />
-    <textarea id="messageTxt" placeholder="Enter message"></textarea>
-    <input type="button" onclick="app.sendSms()" value="Send SMS" />
+```html
+<input id="numberTxt" placeholder="Enter mobile number" value="" type="tel" />
+<textarea id="messageTxt" placeholder="Enter message"></textarea>
+<input type="button" onclick="app.sendSms()" value="Send SMS" />
+```
 
 Javascript
 
-    var app = {
-        sendSms: function() {
-            var number = document.getElementById('numberTxt').value;
-            var message = document.getElementById('messageTxt').value;
-            console.log("number=" + number + ", message= " + message);
-  
-            //CONFIGURATION
-            var options = {
-                replaceLineBreaks: false, // true to replace \n by a new line, false by default
-                android: {
-                    intent: 'INTENT'  // send SMS with the native android SMS messaging
-                    //intent: '' // send SMS without open any other app
-                }
-            };
+```js
+var app = {
+    sendSms: function() {
+        var number = document.getElementById('numberTxt').value.toString(); /* iOS: ensure number is actually a string */
+        var message = document.getElementById('messageTxt').value;
+        console.log("number=" + number + ", message= " + message);
 
-            var success = function () { alert('Message sent successfully'); };
-            var error = function (e) { alert('Message Failed:' + e); };
-            sms.send(number, message, options, success, error);
-        }
-    };
+        //CONFIGURATION
+        var options = {
+            replaceLineBreaks: false, // true to replace \n by a new line, false by default
+            android: {
+                intent: 'INTENT'  // send SMS with the native android SMS messaging
+                //intent: '' // send SMS without opening any other app
+            }
+        };
 
-On Android, an extra function is exposed to know whether or not you have the permission to send a SMS (Android Marshmallow permission).
+        var success = function () { alert('Message sent successfully'); };
+        var error = function (e) { alert('Message Failed:' + e); };
+        sms.send(number, message, options, success, error);
+    }
+};
+```
 
-    var app = {
-        checkSMSPermission: function() {
-            var success = function (hasPermission) { 
-                if (hasPermission) {
-                    sms.send(...);
-                }
-                else {
-                    // show a helpful message to explain why you need to require the permission to send a SMS
-                    // read http://developer.android.com/training/permissions/requesting.html#explain for more best practices
-                }
-            };
-            var error = function (e) { alert('Something went wrong:' + e); };
-            sms.hasPermission(success, error);
-        }
-    };
+On Android, two extra functions are exposed to know whether or not an app has permission and to request permission to send SMS (Android Marshmallow +).
+
+```js
+var app = {
+    checkSMSPermission: function() {
+        var success = function (hasPermission) { 
+            if (hasPermission) {
+                sms.send(...);
+            }
+            else {
+                // show a helpful message to explain why you need to require the permission to send a SMS
+                // read http://developer.android.com/training/permissions/requesting.html#explain for more best practices
+            }
+        };
+        var error = function (e) { alert('Something went wrong:' + e); };
+        sms.hasPermission(success, error);
+    },
+    requestSMSPermission: function() {
+        var success = function (hasPermission) { 
+            if (!hasPermission) {
+                sms.requestPermission(function() {
+                    console.log('[OK] Permission accepted')
+                }, function(error) {
+                    console.info('[WARN] Permission not accepted')
+                    // Handle permission not accepted
+                })
+            }
+        };
+        var error = function (e) { alert('Something went wrong:' + e); };
+        sms.hasPermission(success, error);
+    }
+};
+```
 
 ## FAQ
 #### `sms` is undefined
 
 Please go through all the [closed issues about this subject](https://github.com/cordova-sms/cordova-sms-plugin/issues?q=is%3Aissue+is%3Aclosed+sms+label%3A%22sms+undefined%22). The issue is mostly coming from the way you installed the plugin, please double check everything before opening another issue.
+
+#### Android: INTENT vs NO INTENT
+
+If sending a SMS is a core feature of your application and you would like to send a SMS with `options = { android: { intent: '' } }`, you need to fill [this form](https://docs.google.com/forms/d/e/1FAIpQLSexGxix-00xgnBhPLDvxwjbTcYqHB7enz-cQVJIY4zLuJpRtQ/viewform). If it is not a core feature of your application, you have to use `options = { android: { intent: 'INTENT' } }`. Please, read [this page](https://support.google.com/googleplay/android-developer/answer/9047303) to learn more.
 
 #### When building my project for android I get the following error: `cannot find symbol: cordova.hasPermission(string)`
 
@@ -83,26 +111,32 @@ You can't receive SMS via this plugin. This plugin only sends SMS.
 
 Please read [#issue 26](https://github.com/cordova-sms/cordova-sms-plugin/issues/26)
 
+#### iOS closes the SMS dialog instantly. What's wrong?
+
+Make sure the `number` argument passed is converted to string first using either `String(number)` or `number.toString()`. Notice that `toString()` won't work if the number argument is `null` or `undefined`.
+
 #### I get this error. What's wrong?
 
-    compile:
-        [javac] Compiling 4 source files to /Users/username/MyProject/platforms/android/bin/classes
-        [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:15: cannot find symbol
-        [javac] symbol  : class Telephony
-        [javac] location: package android.provider
-        [javac] import android.provider.Telephony;
-        [javac]                        ^
-        [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:60: cannot find symbol
-        [javac] symbol  : variable KITKAT
-        [javac] location: class android.os.Build.VERSION_CODES
-        [javac]     if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-        [javac]                                                    ^
-        [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:61: package Telephony does not exist
-        [javac]       String defaultSmsPackageName = Telephony.Sms.getDefaultSmsPackage(this.cordova.getActivity());
-        [javac]                                               ^
-        [javac] 3 errors
+```sh
+compile:
+    [javac] Compiling 4 source files to /Users/username/MyProject/platforms/android/bin/classes
+    [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:15: cannot find symbol
+    [javac] symbol  : class Telephony
+    [javac] location: package android.provider
+    [javac] import android.provider.Telephony;
+    [javac]                        ^
+    [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:60: cannot find symbol
+    [javac] symbol  : variable KITKAT
+    [javac] location: class android.os.Build.VERSION_CODES
+    [javac]     if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+    [javac]                                                    ^
+    [javac] /Users/username/MyProject/platforms/android/src/org/apache/cordova/plugin/sms/Sms.java:61: package Telephony does not exist
+    [javac]       String defaultSmsPackageName = Telephony.Sms.getDefaultSmsPackage(this.cordova.getActivity());
+    [javac]                                               ^
+    [javac] 3 errors
+```
 
-    BUILD FAILED
+BUILD FAILED
 
 The problem is that you need to make sure that you set the target to android-19 or later in your ./platforms/android/project.properties file like this:
 
@@ -114,8 +148,17 @@ The problem is that you need to make sure that you set the target to android-19 
 
 This isn't possible on iOS. It requires that you show the user the native sms composer, to be able to send an sms.
 
-Contributing
-============
+
+## Donations
+
+If your app is successful or if you are working for a company, please consider donating some beer money :beer::
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.me/dbaq/10)
+
+Keep in mind that I am maintaining this repository on my free time so thank you for considering a donation. :+1:
+
+
+## Contributing
 
 I believe that everything is working, feel free to put in an issue or to fork and make pull requests if you want to add a new feature.
 
